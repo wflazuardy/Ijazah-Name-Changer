@@ -1,0 +1,173 @@
+from tkinter import *
+from tkinter import filedialog, messagebox
+from tkinter.ttk import Progressbar, Style
+import os
+from shutil import copyfile
+from ocr_function import format_img, read_nrp
+
+class IjazahNameChanger:
+    def __init__(self, master):
+        self.master = master
+        master.title("Ijazah Name Changer")
+        # master.geometry('400x200')
+
+        # *** Style ***
+        self.s = Style()
+        self.s.theme_use("default")
+        self.s.configure("TProgressbar", thickness=8, background='green')
+
+        frameTitle = Frame(master)
+        frameTitle.pack()
+        frameMain = Frame(master)
+        frameMain.pack()
+
+        self.process = False
+
+        # *** Title Frame ***
+        self.labelJudul = Label(frameTitle, text='Ijazah Name Changer', font=('times', 14, 'bold'), pady=8)
+        self.labelJudul.pack(side=TOP,padx=7,pady=4)
+
+        # *** Main Frame ***
+        self.labelSource = Label(frameMain, text="Source Folder")
+        self.labelDestination = Label(frameMain, text="Destination Folder")
+
+        self.entrySource = Entry(frameMain, width=25)
+        self.entryDestination = Entry(frameMain, width=25)
+
+        self.buttonSource = Button(frameMain, text="Search", command=self.get_source)
+        self.buttonDestination = Button(frameMain, text="Search", command=self.get_dest)
+        self.buttonStart = Button(frameMain, text="START",font=('Helvetica', 9, 'bold'), width=5, fg='green', command=self.directory_ocr)
+        self.buttonCancel = Button(frameMain, text="CANCEL",font=('Helvetica', 9, 'bold'), width=7, fg='red', command=self.stop_process)
+
+        self.labelPercent = Label(frameMain, text="")
+        self.progressBar = Progressbar(frameMain, orient="horizontal", mode="determinate", style="TProgressbar")
+
+        self.statusText = StringVar()
+        self.status = Label(master, textvariable=self.statusText, font=('Helvetica', 7, 'normal'), anchor=W, relief=SUNKEN, bd=1)
+        self.statusText.set('Plese select source and destination folder')
+
+        # *** Main Frame Widgets Pack ***
+        self.labelSource.grid(row=0, sticky=E)
+        self.entrySource.grid(row=0, column=1, padx=3)
+        self.buttonSource.grid(row=0, column=2, padx=3)
+        self.labelDestination.grid(row=1, sticky=E)
+        self.entryDestination.grid(row=1, column=1, padx=7)
+        self.buttonDestination.grid(row=1, column=2, padx=7)
+        self.buttonStart.grid(columnspan=3, pady=9)
+        self.labelPercent.grid(columnspan=3)
+        self.progressBar.grid(columnspan=3, sticky=EW)
+
+        # *** Root Frame ***
+        self.status.pack(side=BOTTOM, fill=X)
+
+    def get_source(self):
+        self.sourcedir = filedialog.askdirectory(initialdir = "C:/")
+        self.entrySource.delete(0, END)
+        self.entrySource.insert(0, self.sourcedir)
+
+    def get_dest(self):
+        self.destdir = filedialog.askdirectory(initialdir = "C:/")
+        self.entryDestination.delete(0, END)
+        self.entryDestination.insert(0, self.destdir)
+
+    def make_cancel_button(self):
+        self.buttonStart.grid_forget()
+        self.buttonCancel.grid(row=2, columnspan=3, pady=9)
+
+    def stop_process(self):
+        ask_cancel = messagebox.askquestion("Cancel Message", "Are you sure?")
+        if ask_cancel=='yes':
+            self.process = False
+            self.progressBar.stop()
+            messagebox.showinfo("Warning", "Proses canceled")
+            self.statusText.set("Process canceled")
+
+    def normalize_entry(self):
+        self.entrySource.config({"background": "white"})
+        self.entryDestination.config({"background": "white"})
+
+    def directory_ocr(self):
+        source_dir = self.entrySource.get()
+        dest_dir = self.entryDestination.get()
+
+        # Responses when entries are empty
+        if source_dir == '':
+            messagebox.showwarning('Warning', 'Please select source folder!')
+            self.entrySource.config({"background": "#ffc0b2"})
+            return
+
+        if dest_dir == '':
+            messagebox.showwarning('Warning', 'Please select destination folder!')
+            self.entryDestination.config({"background": "#ffc0b2"})
+            return
+
+        # Response if the selected folders are not exist
+        if os.path.isdir(source_dir) != True:
+            messagebox.showerror('Error', 'The source folder must be exist!')
+            self.entrySource.config({"background": "#ffc0b2"})
+            return
+
+        if os.path.isdir(dest_dir) != True:
+            dest_dialog = messagebox.askquestion("Warning!", "Destination folder is not exist! Do you want to create the folder?")
+            if dest_dialog == 'yes':
+                os.mkdir(dest_dir)
+            else:
+                messagebox.showwarning('Warning', 'Please make the destination folder first!')
+                self.entryDestination.config({"background": "#ffc0b2"})
+                return
+
+        self.process = True
+
+        if source_dir[:1] != '/':
+            source_dir = source_dir + '/'
+
+        if dest_dir[:1] != '/':
+            dest_dir = dest_dir + '/'
+
+        while self.process == True:
+            self.make_cancel_button()
+            self.normalize_entry()
+
+            self.progressBar["value"] = 0
+            self.progressBar["maximum"] = len(os.listdir(source_dir))
+
+            self.labelPercent['text'] = "0%"
+            self.statusText.set("Read source and destination folders...")
+
+
+            for i,img_file in enumerate(os.listdir(source_dir)):
+
+                if self.process == True:
+                    self.statusText.set("Detect NRP in %s..."%img_file)
+                    location = source_dir + img_file
+                    cropped = format_img(location)
+                    nrp = read_nrp(cropped)
+
+                    copyfile(location, (dest_dir + nrp + '.jpg'))
+
+                    self.progressBar["value"] = i + 1
+                    percent = ((i+1) / self.progressBar["maximum"]) * 100
+                    self.labelPercent['text'] = "{}%".format(int(percent))
+                    self.master.update()
+
+                else:
+                    break
+
+            if percent==100:
+                messagebox.showinfo("Status Info","Process Complete!")
+                self.statusText.set("Process complete!")
+
+            self.process=False
+            # break
+
+        self.progressBar["value"] = 0
+        self.labelPercent['text'] = ""
+
+        self.buttonCancel.grid_forget()
+        self.buttonStart.grid(row=2,columnspan=3, pady=9)
+
+
+if __name__ == '__main__':
+    root = Tk()
+    app = IjazahNameChanger(root)
+    root.mainloop()
