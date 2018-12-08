@@ -2,11 +2,19 @@ from tkinter import *
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Progressbar, Style
 import os
+from os import  listdir
+from os.path import isfile, join
 from shutil import copyfile
 from ocr_function import format_img, read_nrp
 
 class IjazahNameChanger:
     def __init__(self, master):
+
+        # Variables
+        self.extensions = [".jpg", ".jpeg", "JPG", "JPEG",
+                           ".png", ".PNG",
+                           ".bmp", ".BMP"]
+
         self.master = master
         master.title("Ijazah Name Changer")
         # master.geometry('400x200')
@@ -86,6 +94,8 @@ class IjazahNameChanger:
         self.entrySource.config({"background": "white"})
         self.entryDestination.config({"background": "white"})
 
+
+    # Function When the START Button Clicked  --> Main Function
     def directory_ocr(self):
         source_dir = self.entrySource.get()
         dest_dir = self.entryDestination.get()
@@ -124,26 +134,34 @@ class IjazahNameChanger:
         if dest_dir[:1] != '/':
             dest_dir = dest_dir + '/'
 
+        # A list to store 'only files' location data
+        onlyfiles = [f for f in listdir(source_dir) if isfile(join(source_dir, f)) & f.endswith(tuple(self.extensions))]
+
+        # Main Process Start
         while self.process == True:
             self.make_cancel_button()
             self.normalize_entry()
 
             self.progressBar["value"] = 0
-            self.progressBar["maximum"] = len(os.listdir(source_dir))
+            self.progressBar["maximum"] = len(onlyfiles)
 
             self.labelPercent['text'] = "0%"
             self.statusText.set("Read source and destination folders...")
 
 
-            for i,img_file in enumerate(os.listdir(source_dir)):
+            for i,img_file in enumerate(onlyfiles):
 
                 if self.process == True:
                     self.statusText.set("Detect NRP in %s..."%img_file)
                     location = source_dir + img_file
                     cropped = format_img(location)
-                    nrp = read_nrp(cropped)
 
-                    copyfile(location, (dest_dir + nrp + '.jpg'))
+                    try:
+                        nrp = read_nrp(cropped)
+                        copyfile(location, (dest_dir + nrp + '.jpg'))
+                    except IndexError:
+                        nrp = "_ERROR_ " + img_file
+                        copyfile(location, (dest_dir + nrp))
 
                     self.progressBar["value"] = i + 1
                     percent = ((i+1) / self.progressBar["maximum"]) * 100
