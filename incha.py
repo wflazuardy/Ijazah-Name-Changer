@@ -126,6 +126,12 @@ class IjazahNameChanger:
                 self.entryDestination.config({"background": "#ffc0b2"})
                 return
 
+        # Responses if the source directory is empty
+        if len(listdir(source_dir)) == 0:
+            messagebox.showerror('Error', 'The source folder is empty!')
+            self.entrySource.config({"background": "#ffc0b2"})
+            return
+
         self.process = True
 
         if source_dir[:1] != '/':
