@@ -11,6 +11,7 @@ class IjazahNameChanger:
     def __init__(self, master):
 
         # Variables
+        self.version = 'version 0.5'
         self.extensions = [".jpg", ".jpeg", "JPG", "JPEG",
                            ".png", ".PNG",
                            ".bmp", ".BMP"]
@@ -50,10 +51,6 @@ class IjazahNameChanger:
         self.labelPercent = Label(frameMain, text="")
         self.progressBar = Progressbar(frameMain, orient="horizontal", mode="determinate", style="TProgressbar")
 
-        self.statusText = StringVar()
-        self.status = Label(master, textvariable=self.statusText, font=('Helvetica', 7, 'normal'), anchor=W, relief=SUNKEN, bd=1)
-        self.statusText.set('Plese select source and destination folder')
-
         # *** Main Frame Widgets Pack ***
         self.labelSource.grid(row=0, sticky=E)
         self.entrySource.grid(row=0, column=1, padx=3)
@@ -66,7 +63,14 @@ class IjazahNameChanger:
         self.progressBar.grid(columnspan=3, sticky=EW)
 
         # *** Root Frame ***
-        self.status.pack(side=BOTTOM, fill=X)
+        self.statusText = StringVar()
+        self.status = Label(master, textvariable=self.statusText, font=('Helvetica', 8, 'normal'), anchor=W,
+                            relief=SUNKEN, bd=1)
+        self.statusText.set('Plese select source and destination folder')
+        self.labelVersion = Label(master, text=self.version, font=('Helvetica', 7, 'normal'), anchor=E)
+
+        self.status.pack(side=TOP, fill=X)
+        self.labelVersion.pack(side=RIGHT,padx=7)
 
     def get_source(self):
         self.sourcedir = filedialog.askdirectory(initialdir = "C:/")
@@ -87,7 +91,7 @@ class IjazahNameChanger:
         if ask_cancel=='yes':
             self.process = False
             self.progressBar.stop()
-            messagebox.showinfo("Warning", "Proses canceled")
+            messagebox.showinfo("Warning", "Proses canceled\nOnly %i/%i Files Have Been Renamed"%(self.count,self.countfiles))
             self.statusText.set("Process canceled")
 
     def normalize_entry(self):
@@ -148,8 +152,9 @@ class IjazahNameChanger:
             self.make_cancel_button()
             self.normalize_entry()
 
+            self.countfiles = len(onlyfiles)
             self.progressBar["value"] = 0
-            self.progressBar["maximum"] = len(onlyfiles)
+            self.progressBar["maximum"] = self.countfiles
 
             self.labelPercent['text'] = "0%"
             self.statusText.set("Read source and destination folders...")
@@ -158,7 +163,7 @@ class IjazahNameChanger:
             for i,img_file in enumerate(onlyfiles):
 
                 if self.process == True:
-                    self.statusText.set("Detect NRP in %s..."%img_file)
+                    self.statusText.set("Detect NRP in %s...\t\t\t\t%i/%i"%(img_file, i+1,self.countfiles))
                     location = source_dir + img_file
                     cropped = format_img(location)
 
@@ -168,7 +173,7 @@ class IjazahNameChanger:
                     except IndexError:
                         nrp = "_ERROR_ " + img_file
                         copyfile(location, (dest_dir + nrp))
-
+                    self.count = i+1
                     self.progressBar["value"] = i + 1
                     percent = ((i+1) / self.progressBar["maximum"]) * 100
                     self.labelPercent['text'] = "{}%".format(int(percent))
@@ -178,7 +183,7 @@ class IjazahNameChanger:
                     break
 
             if percent==100:
-                messagebox.showinfo("Status Info","Process Complete!")
+                messagebox.showinfo("Process Report","Process Complete!")
                 self.statusText.set("Process complete!")
 
             self.process=False
