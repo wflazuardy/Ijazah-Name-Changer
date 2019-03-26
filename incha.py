@@ -11,7 +11,7 @@ class IjazahNameChanger:
     def __init__(self, master):
 
         # Variables
-        self.version = 'version 0.5'
+        self.version = 'version 0.6'
         self.extensions = [".jpg", ".jpeg", "JPG", "JPEG",
                            ".png", ".PNG",
                            ".bmp", ".BMP"]

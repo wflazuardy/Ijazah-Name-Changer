@@ -1,33 +1,27 @@
 from pytesseract import image_to_string
 from PIL import Image
-from resizeimage import resizeimage
 import os
 from shutil import copyfile
-from collections import defaultdict
-import string
+import re
 _NoneType = type(None)
 
-def keeper(keep):
-    table = defaultdict(_NoneType)
-    table.update({ord(c): c for c in keep})
-    return table
-
-digit_keeper = keeper(string.digits)
-
+# Function to crop Image
 def format_img(img_loc):
     img = Image.open(img_loc)
-    resized = resizeimage.resize_height(img, 750)
-    cropped = resized.crop((310, 282, 715, 338))
+    cropped = img.crop((590, 465, 1220, 565))
     return cropped
 
+# Function to read NRP with tesseract
+# include a preprocess to keep only digits from words and select the NRP
 def read_nrp(img):
     string = image_to_string(img)
     words = string.split()
-    get_nrp = [w for w in words if len(w) >= 10]
+    get_nrp = [re.sub("\D", "", w) for w in words]
+    get_nrp = [w for w in get_nrp if len(w) >= 10]
     nrp = get_nrp[0]
-    nrp = nrp.translate(digit_keeper)
     return nrp
 
+# Main function
 def ocr(source_dir, dest_dir):
     if source_dir[:1] != '/':
         source_dir = source_dir + '/'
@@ -44,6 +38,7 @@ def ocr(source_dir, dest_dir):
 
     print ('Complete!')
 
+# For single image only
 def single_ocr(img):
     img_cropped = format_img(img)
     nrp = read_nrp(img_cropped)
